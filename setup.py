@@ -1,33 +1,27 @@
 from pathlib import Path
-
+from django.contrib.sessions.backends import file
 from setuptools import find_packages, setup
 
-
-# This is the package name as shown in "pip list"
-PACKAGE_NAME = "netbox-hello-world-page"
-
+PACKAGE_NAME = "netbox_plugin_buildingplan"
 
 def get_version():
-    version_file = Path(__file__).parent / PACKAGE_NAME.replace("-", "_") / "version.py"
+    version_file = Path(file).parent / PACKAGE_NAME.replace("-", "_") / "version.py"
     with version_file.open() as f:
         for line in f.readlines():
-            if "__version__" not in line:
+            if "version" not in line:
                 continue
             delimiter = "'" if "'" in line else '"'
             return line.split(delimiter)[1]
     raise RuntimeError("Could not find the version number")
 
-
 setup(
     name=PACKAGE_NAME,
     version=get_version(),
-    description="An example NetBox plugin",
-    url="https://github.com/markkuleinio/netbox-hello-world-page",
-    author='Markku Leiniö',
-    license='Apache 2.0',
+    description="A NetBox plugin to add building plans to tenants.",
+    author="Ledy Gaga",
+    license="MIT",
     install_requires=[],
     packages=find_packages(),
-    # MANIFEST.in helps finding the data files:
     include_package_data=True,
     zip_safe=False,
 )
