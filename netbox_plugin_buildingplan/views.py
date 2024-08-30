@@ -1,45 +1,22 @@
-import random
-
-from django.shortcuts import render
-from django.views.generic import View
-from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views.generic import View
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django_tables2 import RequestConfig
+
+from netbox.views import generic
+from netbox_plugin_buildingplan.filtersets import  BuildingPlanFilter
+from netbox_plugin_buildingplan.tables import BuildingPlanTable
 from tenancy.models import Tenant
 from utilities.views import ViewTab, register_model_view
 from netbox_plugin_buildingplan.models import BuildingPlan
-from netbox_plugin_buildingplan.forms import BuildingPlanForm
+from netbox_plugin_buildingplan.forms import BuildingPlanForm, BuildingPlanAddForm, BuildingPlanFilterForm
 
-class HelloWorldView(PermissionRequiredMixin, View):
-    """
-    Display the "Hello, World!" page
-    """
-    # This allows only users having View access to prefixes.
-    # If you don't need this kind of control, just remove this and
-    # the PermissionRequiredMixin from the class.
-    permission_required = "ipam.view_prefix"
 
-    def get(self, request):
-        # This is our code that gets run every time the page is visited
-        number = random.randint(0, 999999)
-        # Let's also see the query parameters
-        query_params = str(dict(request.GET))
-        # Now let's render the page output, using our variables
-        return render(
-            request,
-            "netbox_plugin_buildingplan/helloworld.html",
-            {
-                "number": number,
-                "query_params": query_params,
-            },
-        )
-
-@register_model_view(Tenant, name="building-plan-tab")
+@register_model_view(Tenant, name="buildingplan_tab")
 class BuildingPlanTabView(PermissionRequiredMixin, View):
-    permission_required = "tenancy.view_tenant"
+    permission_required = "netbox_plugin_buildingplan.view_buildingplan"
     tab = ViewTab(
         label="Building Plan",
         permission="tenancy.view_tenant",
@@ -47,68 +24,65 @@ class BuildingPlanTabView(PermissionRequiredMixin, View):
 
     def get(self, request, pk):
         tenant = get_object_or_404(Tenant, pk=pk)
-        building_plan = BuildingPlan.objects.filter(tenant=tenant).first()
-        form = BuildingPlanForm(instance=building_plan)
+        building_plans = BuildingPlan.objects.filter(tenant=tenant)
+        table = BuildingPlanTable(data=building_plans)
+        table.configure(request)
 
         return render(
             request,
             "netbox_plugin_buildingplan/building_plan_tab.html",
             context={
                 "object": tenant,
-                "building_plan": building_plan,
-                "form": form,
+                "table": table,
                 "tab": self.tab,
             },
         )
 
-
 class BuildingPlanCreateView(PermissionRequiredMixin, CreateView):
-    permission_required = "tenancy.add_tenant"
+    permission_required = "netbox_plugin_buildingplan.add_buildingplan"
     model = BuildingPlan
-    form_class = BuildingPlanForm
+    form_class = BuildingPlanAddForm
+    template_name = 'netbox_plugin_buildingplan/building_plan_add.html'
 
     def form_valid(self, form):
-        form.instance.tenant = get_object_or_404(Tenant, pk=self.kwargs['pk'])
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('plugins:netbox_plugin_buildingplan:building-plan-tab', kwargs={'pk': self.kwargs['pk']})
-
+        return reverse('plugins:netbox_plugin_buildingplan:buildingplan_list')
 
 class BuildingPlanUpdateView(PermissionRequiredMixin, UpdateView):
-    permission_required = "tenancy.change_tenant"
+    permission_required = "netbox_plugin_buildingplan.change_buildingplan"
     model = BuildingPlan
     form_class = BuildingPlanForm
-
-    def get_object(self):
-        tenant_id = self.kwargs.get('pk')
-        return get_object_or_404(BuildingPlan, tenant_id=tenant_id)
+    template_name = "netbox_plugin_buildingplan/building_plan_edit.html"
 
     def get_success_url(self):
-        return reverse('plugins:netbox_plugin_buildingplan:building-plan-tab', kwargs={'pk': self.kwargs['pk']})
+        return reverse('plugins:netbox_plugin_buildingplan:buildingplan_list')
 
 
 class BuildingPlanDeleteView(PermissionRequiredMixin, DeleteView):
-    permission_required = "tenancy.delete_tenant"
+    permission_required = "netbox_plugin_buildingplan.delete_buildingplan"
     model = BuildingPlan
-
-    def get_object(self):
-        tenant_id = self.kwargs.get('pk')
-        return get_object_or_404(BuildingPlan, tenant_id=tenant_id)
+    template_name = "netbox_plugin_buildingplan/building_plan_delete.html"
 
     def get_success_url(self):
-        return reverse('plugins:netbox_plugin_buildingplan:building-plan-tab', kwargs={'pk': self.kwargs['pk']})
+        return reverse('plugins:netbox_plugin_buildingplan:buildingplan_list')
 
 
-class BuildingPlanListView(PermissionRequiredMixin, View):
-    permission_required = "tenancy.view_tenant"
+class BuildingPlanListView(PermissionRequiredMixin, generic.ObjectListView):
+    permission_required = "netbox_plugin_buildingplan.view_buildingplan"
+    model = BuildingPlan
+    table = BuildingPlanTable
+    template_name = 'netbox_plugin_buildingplan/building_plan_list.html'
+    filterset = BuildingPlanFilter
+    filterset_form = BuildingPlanFilterForm
 
-    def get(self, request):
-        building_plans = BuildingPlan.objects.all()
-        return render(
-            request,
-            "netbox_plugin_buildingplan/building_plan_list.html",
-            context={
-                "building_plans": building_plans,
-            },
-        )
+    def dispatch(self, request, *args, **kwargs):
+        queryset = BuildingPlan.objects.select_related('tenant').all()
+        self.queryset = self.filterset(request.GET, queryset).qs
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = self.filterset_form(self.request.GET)
+        return context

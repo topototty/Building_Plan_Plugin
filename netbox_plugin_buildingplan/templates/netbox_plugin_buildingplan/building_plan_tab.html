@@ -1,68 +1,15 @@
 {% extends 'generic/object.html' %}
+{% load render_table from django_tables2 %}
 
 {% block content %}
-  <h1>Building Plan for {{ object.name }}</h1>
-
-  {% if building_plan %}
-    <div>
-           {% if building_plan.image %}
-        <img src="{{ building_plan.image.url }}" alt="Building Plan" style="max-width: 100%; height: auto;">
-      {% else %}
-        <p>No building plan image available.</p>
-      {% endif %}
-      <p>{{ building_plan.description }}</p>
-      <button class="btn btn-warning" data-toggle="modal" data-target="#editBuildingPlanModal">Edit</button>
-      <form method="POST" action="{% url 'plugins:netbox_plugin_buildingplan:delete_building_plan' pk=object.pk %}" style="display: inline;">
-        {% csrf_token %}
-        <button class="btn btn-danger" type="submit">Delete</button>
-      </form>
+<div class="row">
+    <div class="col col-md-12">
+        <div class="card">
+            <h5 class="card-header">Building Plans</h5>
+            <div class="card-body table-responsive">
+                {% render_table table %}
+            </div>
+        </div>
     </div>
-  {% else %}
-    <p>No building plan uploaded.</p>
-    <button class="btn btn-primary" data-toggle="modal" data-target="#addBuildingPlanModal">Add Building Plan</button>
-  {% endif %}
-
-  <!-- Add Modal -->
-  <div class="modal fade" id="addBuildingPlanModal" tabindex="-1" role="dialog" aria-labelledby="addBuildingPlanModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="addBuildingPlanModalLabel">Add Building Plan</h5>
-
-        </div>
-        <div class="modal-body">
-          <form method="POST" enctype="multipart/form-data" action="{% url 'plugins:netbox_plugin_buildingplan:add_building_plan' pk=object.pk %}">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn btn-primary">Save</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Edit Modal -->
-  <div class="modal fade" id="editBuildingPlanModal" tabindex="-1" role="dialog" aria-labelledby="editBuildingPlanModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="editBuildingPlanModalLabel">Edit Building Plan</h5>
-
-        </div>
-        <div class="modal-body">
-          <form method="POST" enctype="multipart/form-data" action="{% url 'plugins:netbox_plugin_buildingplan:edit_building_plan' pk=object.pk %}">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn btn-primary">Save changes</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-
+</div>
 {% endblock %}

@@ -1,7 +1,0 @@
-<form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ tenant_form.as_p }}
-    <h3>Building Plan</h3>
-    {{ building_plan_form.as_p }}
-    <button type="submit" class="btn btn-primary">Create</button>
-</form>
